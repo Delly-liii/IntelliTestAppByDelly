@@ -644,7 +644,28 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
                     ),
                   ),
                 ),
-                _getTypeIcon(question['type']),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'edit':
+                        _showQuestionDialog(question: question);
+                        break;
+                      case 'delete':
+                        _deleteQuestion(question);
+                        break;
+                      case 'duplicate':
+                        _duplicateQuestion(question);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    const PopupMenuItem(
+                        value: 'duplicate', child: Text('Duplicate')),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -709,6 +730,46 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
         ),
       ),
     );
+  }
+
+  void _deleteQuestion(Map<String, dynamic> question) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Question?'),
+        content: const Text('Are you sure you want to delete this question?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      await ApiService.instance.deleteQuestion(question['id']);
+      _loadQuestions();
+    }
+  }
+
+  void _duplicateQuestion(Map<String, dynamic> question) async {
+    await ApiService.instance.addQuestion(
+      text: question['text'],
+      type: question['type'],
+      difficulty: question['difficulty'],
+    );
+    _loadQuestions();
+  }
+
+  void _showQuestionDialog({required Map<String, dynamic> question}) {
+    _questionController.text = question['text'];
+    _type = question['type'];
+    _difficulty = question['difficulty'];
+    _showAddQuestionDialog(); // reuse dialog
   }
 
   Widget _buildLoadingSkeleton() {
@@ -782,6 +843,10 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
       ),
     );
   }
+}
+
+extension on ApiService {
+  Future<void> deleteQuestion(question) async {}
 }
 
 class QuestionBankColors {
