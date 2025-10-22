@@ -323,6 +323,23 @@ class _TestBankPageState extends State<TestBankPage> {
     );
   }
 
+  Widget _buildTestMetric(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: Colors.grey[600]),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCreationOption(
       String title, String subtitle, IconData icon, VoidCallback onTap) {
     return Card(
@@ -619,7 +636,7 @@ class _TestBankPageState extends State<TestBankPage> {
               children: [
                 TextButton.icon(
                   onPressed: () {
-                    // Edit functionality
+                    _editTest(test);
                   },
                   icon: const Icon(Icons.edit, size: 16),
                   label: const Text('Edit'),
@@ -642,10 +659,7 @@ class _TestBankPageState extends State<TestBankPage> {
                         child: Text('Delete',
                             style: TextStyle(color: Colors.red))),
                   ],
-                  onSelected: (value) {
-                    // Handle menu actions
-                    debugPrint("Selected $value for ${test['title']}");
-                  },
+                  onSelected: (value) => _handleMenuAction(value, test),
                   icon: const Icon(Icons.more_vert),
                 ),
               ],
@@ -656,15 +670,27 @@ class _TestBankPageState extends State<TestBankPage> {
     );
   }
 
-  Widget _buildTestMetric(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text(text, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-      ],
-    );
+  void _handleMenuAction(String value, Map<String, dynamic> test) {
+    switch (value) {
+      case 'view':
+        _showTestDetails(test);
+        break;
+      case 'preview':
+        _showPreview(test);
+        break;
+      case 'duplicate':
+        _duplicateTest(test);
+        break;
+      case 'share':
+        _shareTest(test);
+        break;
+      case 'archive':
+        _archiveTest(test);
+        break;
+      case 'delete':
+        _deleteTest(test);
+        break;
+    }
   }
 
   Widget _buildEmptyState() {
@@ -768,6 +794,129 @@ class _TestBankPageState extends State<TestBankPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _editTest(Map<String, dynamic> test) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Edit Test'),
+        content: Text('Editing "${test['title']}"...'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
+  void _showTestDetails(Map<String, dynamic> test) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(test['title']),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Course: ${test['course']}'),
+            Text('Questions: ${test['questionCount']}'),
+            Text('Duration: ${test['duration']} min'),
+            Text('Status: ${test['status']}'),
+            Text('Attempts: ${test['attempts']}'),
+            if (test['averageScore'] != null)
+              Text('Average Score: ${test['averageScore']}%'),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showPreview(Map<String, dynamic> test) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Preview: ${test['title']}'),
+        content: const Text('This would show a preview of the test questions.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _duplicateTest(Map<String, dynamic> test) {
+    setState(() {
+      final newTest = Map<String, dynamic>.from(test);
+      newTest['id'] = DateTime.now().millisecondsSinceEpoch.toString();
+      newTest['title'] = '${test['title']} (Copy)';
+      newTest['status'] = 'Draft';
+      _tests.add(newTest);
+      _filterTests();
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Duplicated "${test['title']}"')));
+  }
+
+  void _shareTest(Map<String, dynamic> test) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Share Test'),
+        content:
+            Text('A shareable link for "${test['title']}" would be generated.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _archiveTest(Map<String, dynamic> test) {
+    setState(() {
+      test['status'] = 'Archived';
+      _filterTests();
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('"${test['title']}" archived.')));
+  }
+
+  void _deleteTest(Map<String, dynamic> test) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Test'),
+        content: Text('Are you sure you want to delete "${test['title']}"?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              setState(() {
+                _tests.removeWhere((t) => t['id'] == test['id']);
+                _filterTests();
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('"${test['title']}" deleted.')),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
